@@ -1,15 +1,21 @@
 name: Windows build
 
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      test-filter:
+        description: "Optional mocha --grep pattern; empty runs the full suite"
+        required: false
+        default: ""
 
 jobs:
   build:
     name: Node ${{ matrix.node-version }}
     runs-on: windows-latest
+    timeout-minutes: 30
 
     strategy:
+      fail-fast: false
       matrix:
         # mocha nolonger supports node 10
         node-version: [18.x, 20.x, 22.x]
@@ -29,4 +35,4 @@ jobs:
 
       - name: Run Tests
         run: |
-          npm test
+          npm test${{ inputs.test-filter && format(' -- --grep "{0}"', inputs.test-filter) || '' }}

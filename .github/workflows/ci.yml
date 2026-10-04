@@ -1,15 +1,21 @@
 name: Linux build
 
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      test-filter:
+        description: "Optional mocha --grep pattern; empty runs the full suite"
+        required: false
+        default: ""
 
 jobs:
   build:
     name: Node ${{ matrix.node-version }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     strategy:
+      fail-fast: false
       matrix:
         # mocha nolonger supports node 10
         node-version: [12.x, 14.x, 16.x, 18.x, 20.x, 21.x]
@@ -29,4 +35,19 @@ jobs:
 
       - name: Run Tests
         run: |
-          npm test
+          npm test${{ inputs.test-filter && format(' -- --grep "{0}"', inputs.test-filter) || '' }}
+
+      - name: Pack
+        if: matrix.node-version == '20.x'
+        run: |
+          npm i -g npm@10.8.2
+          mkdir -p dist
+          npm pack --pack-destination dist
+
+      - name: Upload package
+        if: matrix.node-version == '20.x'
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: dist/*.tgz
+          if-no-files-found: error
